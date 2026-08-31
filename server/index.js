@@ -25,6 +25,10 @@ const chatRoutes = require('./routes/chat');
 const app = express();
 const server = http.createServer(app);
 
+// Trust Render/Vercel/Railway reverse proxy
+// Required for express-rate-limit to correctly read client IP from X-Forwarded-For
+app.set('trust proxy', 1);
+
 // Socket.io setup
 const io = new Server(server, {
   cors: {
