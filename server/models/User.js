@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
     rememberMeToken: { type: String },
     lastLogin: { type: Date },
     avatar: { type: String, default: '' },
+    isBanned: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

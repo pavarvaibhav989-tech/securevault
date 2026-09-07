@@ -7,6 +7,20 @@ const path = require('path');
 
 const connectDB = require('./config/db');
 const { PORT, CLIENT_URL } = require('./config/config');
+
+// Allow multiple origins: local dev + production frontend
+const ALLOWED_ORIGINS = [
+  CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+].filter(Boolean);
+
+const corsOrigin = (origin, callback) => {
+  // Allow requests with no origin (mobile apps, Postman)
+  if (!origin) return callback(null, true);
+  if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+  callback(new Error(`CORS blocked: ${origin}`));
+};
 const { apiLimiter } = require('./middleware/rateLimiter');
 const idsMiddleware = require('./middleware/idsMiddleware');
 const setupSocket = require('./socket/socketHandler');
@@ -32,7 +46,7 @@ app.set('trust proxy', 1);
 // Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: CLIENT_URL,
+    origin: corsOrigin,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -44,7 +58,7 @@ app.set('io', io); // Make io available in controllers via req.app.get('io')
 // Middleware
 // ─────────────────────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: CLIENT_URL,
+  origin: corsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 }));

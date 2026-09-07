@@ -1,26 +1,56 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import toast from "react-hot-toast";
 import { idsService } from "../services/idsService";
 
-const QUARANTINE = [
-  { ip: "192.168.1.105", vector: "SQL Injection Attempt",  severity: "critical", ts: "14:32:01 UTC" },
-  { ip: "45.33.22.11",   vector: "DDoS SYN Flood",         severity: "high",     ts: "14:30:15 UTC" },
-  { ip: "10.0.0.55",     vector: "Unauthorized Port Scan", severity: "medium",   ts: "14:28:44 UTC" },
-  { ip: "172.16.254.1",  vector: "Repeated Failed Logins", severity: "low",      ts: "14:15:00 UTC" },
-];
-
 const SEV = {
-  critical: { cls: "badge-critical-sv", dot: "bg-error",              label: "Critical" },
-  high:     { cls: "badge-high-sv",     dot: "bg-secondary-container", label: "High" },
-  medium:   { cls: "badge-medium-sv",   dot: "bg-tertiary",            label: "Medium" },
-  low:      { cls: "badge-low-sv",      dot: "bg-outline",             label: "Low" },
+  critical: { cls: "badge-critical-sv", dot: "bg-error",              label: "Critical", color: "#EF4444" },
+  high:     { cls: "badge-high-sv",     dot: "bg-secondary-container", label: "High",     color: "#F97316" },
+  medium:   { cls: "badge-medium-sv",   dot: "bg-tertiary",            label: "Medium",   color: "#FACC15" },
+  low:      { cls: "badge-low-sv",      dot: "bg-outline",             label: "Low",      color: "#94A3B8" },
 };
 
+const REFRESH_MS = 10000;
+
 export default function IDSPage() {
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs]         = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [sevFilter, setSevFilter] = useState("all");
+  const [countdown, setCountdown] = useState(REFRESH_MS / 1000);
+  const timerRef = useRef(null);
+  const countRef = useRef(null);
+
+  const fetchLogs = async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const r = await idsService.getLogs();
+      setLogs(r.data?.data?.logs || []);
+    } catch { /* silent fail */ }
+    finally { if (!silent) setLoading(false); }
+  };
+
+  const clearLogs = async () => {
+    try {
+      await idsService.clearLogs?.();
+      setLogs([]);
+      toast.success("Logs cleared");
+    } catch { toast.error("Could not clear logs"); }
+  };
 
   useEffect(() => {
-    idsService.getLogs().then((r) => setLogs(r.data?.data?.logs || [])).catch(() => {});
+    fetchLogs();
+    // Auto-refresh every 10s
+    timerRef.current = setInterval(() => fetchLogs(true), REFRESH_MS);
+    // Countdown
+    countRef.current = setInterval(() =>
+      setCountdown((c) => (c <= 1 ? REFRESH_MS / 1000 : c - 1)), 1000);
+    return () => {
+      clearInterval(timerRef.current);
+      clearInterval(countRef.current);
+    };
   }, []);
+
+  const filtered = sevFilter === "all" ? logs : logs.filter((l) => l.severity === sevFilter);
+
 
   const statCards = [
     { label: "Active Breaches",    value: 14,      color: "text-sv-red",              border: "border-l-error",              icon: "warning",    badge: "Critical", badgeCls: "bg-error-container/20 text-sv-red" },
@@ -125,15 +155,43 @@ export default function IDSPage() {
         </div>
       </div>
 
-      {/* Quarantine table */}
+      {/* Quarantine / Live Logs table */}
       <section className="glass-panel overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-sv-card-highest/30">
+        <div className="px-5 py-4 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-sv-card-highest/30">
           <h2 className="font-display font-semibold text-on-surface flex items-center gap-2">
-            <span className="material-symbols-outlined text-sv-red">gavel</span>Auto-Quarantined IPs
+            <span className="material-symbols-outlined text-sv-red">gavel</span>
+            Live Threat Log
+            {logs.length > 0 && (
+              <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/15 text-red-400 border border-red-500/25">{logs.length}</span>
+            )}
           </h2>
-          <button className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold hover:opacity-90 transition-colors">
-            Export Log
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Severity filter */}
+            {["all", "critical", "high", "medium", "low"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setSevFilter(f)}
+                className="px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold capitalize transition-all"
+                style={{
+                  background: sevFilter === f ? 'rgba(34,197,94,0.12)' : 'transparent',
+                  border: `1px solid ${sevFilter === f ? 'rgba(34,197,94,0.35)' : 'rgba(255,255,255,0.07)'}`,
+                  color: sevFilter === f ? '#22C55E' : '#64748B',
+                }}
+              >{f}</button>
+            ))}
+            {/* Countdown */}
+            <span className="text-[11px] font-mono text-slate-500 ml-1">
+              ↻ {countdown}s
+            </span>
+            {/* Clear logs */}
+            <button
+              onClick={clearLogs}
+              className="flex items-center gap-1 px-3 py-1 rounded-md text-[11px] font-mono font-semibold transition-all"
+              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#F87171' }}
+            >
+              <span className="material-symbols-outlined text-[14px]">delete_sweep</span>Clear
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -145,20 +203,33 @@ export default function IDSPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-sm">
-              {QUARANTINE.map((q, i) => {
+              {loading && (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-sv-muted-fg">
+                  <span className="w-4 h-4 border-2 border-sv-green/30 border-t-sv-green rounded-full animate-spin inline-block mr-2" />
+                  Loading threat data…
+                </td></tr>
+              )}
+              {!loading && filtered.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-10 text-center">
+                  <span className="material-symbols-outlined text-4xl text-sv-green/30 block mb-2">verified_user</span>
+                  <span className="text-sv-muted-fg text-sm">{logs.length === 0 ? "No threats detected — system is clean." : "No threats match the selected filter."}</span>
+                </td></tr>
+              )}
+              {!loading && filtered.map((q, i) => {
                 const s = SEV[q.severity] || SEV.low;
+                const ts = q.createdAt ? new Date(q.createdAt).toLocaleTimeString() : q.timestamp || "—";
                 return (
-                  <tr key={i} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-4 py-3 font-mono text-primary text-sm">{q.ip}</td>
-                    <td className="px-4 py-3 text-on-surface">{q.vector}</td>
+                  <tr key={q._id || i} className="hover:bg-white/5 transition-colors group">
+                    <td className="px-4 py-3 font-mono text-sv-green text-sm">{q.ip || q.sourceIp || "—"}</td>
+                    <td className="px-4 py-3 text-on-surface">{q.vector || q.type || q.message || "Unknown"}</td>
                     <td className="px-4 py-3">
                       <span className={s.cls}>
                         <span className={`w-1.5 h-1.5 rounded-full ${s.dot} inline-block`} />{s.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sv-muted-fg text-xs">{q.ts}</td>
+                    <td className="px-4 py-3 text-sv-muted-fg text-xs font-mono">{ts}</td>
                     <td className="px-4 py-3 text-right">
-                      <button className="text-sv-muted-fg group-hover:text-primary transition-colors">
+                      <button className="text-sv-muted-fg group-hover:text-sv-green transition-colors">
                         <span className="material-symbols-outlined text-xl">more_vert</span>
                       </button>
                     </td>

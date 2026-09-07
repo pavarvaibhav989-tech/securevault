@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 
@@ -23,6 +24,7 @@ import LearningPage from './pages/LearningPage';
 import BirthdayPage from './pages/BirthdayPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 // App layout with sidebar
 function AppLayout() {
@@ -50,7 +52,8 @@ function AppLayout() {
                 <Route path="/admin" element={<AdminPage />} />
               </Route>
             </Route>
-          </Routes>
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
         </main>
       </div>
     </div>
@@ -59,33 +62,36 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: '#1B2336',
-              color: '#F1F5F9',
-              border: '1px solid rgba(34,197,94,0.18)',
-              borderRadius: '10px',
-              fontSize: '13px',
-              fontFamily: '"JetBrains Mono", monospace',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-            },
-            success: { iconTheme: { primary: '#22C55E', secondary: '#052E16' } },
-            error:   { iconTheme: { primary: '#EF4444', secondary: '#1B2336' } },
-          }}
-        />
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/verify-otp" element={<VerifyOTPPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/*" element={<AppLayout />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#1B2336',
+                color: '#F1F5F9',
+                border: '1px solid rgba(34,197,94,0.18)',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontFamily: '"JetBrains Mono", monospace',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+              },
+              success: { iconTheme: { primary: '#22C55E', secondary: '#052E16' } },
+              error:   { iconTheme: { primary: '#EF4444', secondary: '#1B2336' } },
+            }}
+          />
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/verify-otp" element={<VerifyOTPPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/404" element={<NotFoundPage />} />
+            <Route path="/*" element={<AppLayout />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

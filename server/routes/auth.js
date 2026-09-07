@@ -4,6 +4,7 @@ const {
   register, login, logout, verifyOTP, resendOTP,
   forgotPassword, resetPassword, getMe, getLoginHistory,
   updateProfile, changePassword, getAllUsersAdmin, deleteUserAdmin,
+  toggleBanAdmin, changeRoleAdmin,
 } = require('../controllers/authController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 const { authLimiter, otpLimiter } = require('../middleware/rateLimiter');
@@ -21,5 +22,7 @@ router.put('/profile', protect, updateProfile);
 router.put('/change-password', protect, changePassword);
 router.get('/users', protect, adminOnly, getAllUsersAdmin);
 router.delete('/users/:id', protect, adminOnly, deleteUserAdmin);
+router.patch('/users/:id/ban', protect, adminOnly, toggleBanAdmin);
+router.patch('/users/:id/role', protect, adminOnly, changeRoleAdmin);
 
 module.exports = router;

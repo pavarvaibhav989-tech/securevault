@@ -21,6 +21,19 @@ const logLogin = async (userId, req, status, failReason = '') => {
   });
 };
 
+// DELETE /api/auth/users/:id (admin)
+exports.deleteUserAdmin = async (req, res) => {
+  try {
+    if (req.params.id === req.user._id.toString())
+      return res.status(400).json({ success: false, message: 'Cannot delete your own account.' });
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'User deleted.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
 // POST /api/auth/register
 exports.register = async (req, res) => {
   try {
@@ -293,14 +306,38 @@ exports.getAllUsersAdmin = async (req, res) => {
   }
 };
 
-// DELETE /api/auth/users/:id (admin)
-exports.deleteUserAdmin = async (req, res) => {
+// PATCH /api/auth/users/:id/ban (admin)
+exports.toggleBanAdmin = async (req, res) => {
   try {
     if (req.params.id === req.user._id.toString())
-      return res.status(400).json({ success: false, message: 'Cannot delete your own account.' });
-    await User.findByIdAndDelete(req.params.id);
-    res.json({ success: true, message: 'User deleted.' });
+      return res.status(400).json({ success: false, message: 'Cannot ban yourself.' });
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    user.isBanned = !user.isBanned;
+    await user.save();
+    res.json({ success: true, message: user.isBanned ? `User "${user.name}" banned.` : `User "${user.name}" unbanned.`, isBanned: user.isBanned });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// PATCH /api/auth/users/:id/role (admin)
+exports.changeRoleAdmin = async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['user', 'admin'].includes(role))
+      return res.status(400).json({ success: false, message: 'Invalid role. Must be user or admin.' });
+    if (req.params.id === req.user._id.toString())
+      return res.status(400).json({ success: false, message: 'Cannot change your own role.' });
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true, select: '-password -passwordHistory -otp -otpExpiry' }
+    );
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    res.json({ success: true, message: `Role changed to "${role}" for ${user.name}.`, user });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
