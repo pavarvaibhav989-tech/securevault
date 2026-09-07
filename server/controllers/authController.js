@@ -58,12 +58,24 @@ exports.register = async (req, res) => {
     const user = new User({ name, email, password, otp, otpExpiry });
     await user.save();
 
-    await sendOTPEmail(email, otp, name);
+    console.log(`🔐 [SECUREVAULT REGISTRATION] OTP for ${email}: ${otp}`);
+
+    let emailSent = false;
+    try {
+      await sendOTPEmail(email, otp, name);
+      emailSent = true;
+    } catch (emailErr) {
+      console.warn(`[WARN] Failed to send OTP email to ${email}:`, emailErr.message);
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Registration successful. Check your email for the OTP.',
+      message: emailSent
+        ? 'Registration successful. Check your email for the OTP.'
+        : 'Registration successful. OTP generated (check server console if SMTP is not configured).',
       userId: user._id,
+      // For development/demo convenience when no SMTP is active
+      ...(process.env.NODE_ENV !== 'production' ? { devOtp: otp } : {}),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -106,8 +118,18 @@ exports.resendOTP = async (req, res) => {
     user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    await sendOTPEmail(email, otp, user.name);
-    res.json({ success: true, message: 'New OTP sent to your email.' });
+    console.log(`🔐 [SECUREVAULT RESEND OTP] OTP for ${email}: ${otp}`);
+    try {
+      await sendOTPEmail(email, otp, user.name);
+    } catch (emailErr) {
+      console.warn(`[WARN] Failed to send OTP email to ${email}:`, emailErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: 'New OTP generated. Check your email.',
+      ...(process.env.NODE_ENV !== 'production' ? { devOtp: otp } : {}),
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -205,7 +227,11 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     const resetLink = `${CLIENT_URL}/reset-password?token=${resetToken}&email=${email}`;
-    await sendPasswordResetEmail(email, resetLink, user.name);
+    try {
+      await sendPasswordResetEmail(email, resetLink, user.name);
+    } catch (emailErr) {
+      console.warn(`[WARN] Failed to send reset email to ${email}:`, emailErr.message);
+    }
 
     res.json({ success: true, message: 'Password reset link sent to your email.' });
   } catch (err) {

@@ -43,6 +43,20 @@ exports.deleteRule = async (req, res) => {
   }
 };
 
+// PATCH /api/firewall/rules/:id/toggle
+exports.toggleRule = async (req, res) => {
+  try {
+    const rule = await FirewallRule.findById(req.params.id);
+    if (!rule) return res.status(404).json({ success: false, message: 'Rule not found.' });
+    rule.enabled = !rule.enabled;
+    await rule.save();
+    res.json({ success: true, message: `Rule ${rule.enabled ? 'enabled' : 'disabled'}.`, enabled: rule.enabled });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
 // POST /api/firewall/simulate
 exports.simulatePacket = async (req, res) => {
   try {

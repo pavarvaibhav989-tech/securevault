@@ -13,6 +13,7 @@ const pageTitle = {
   "/learn":     "Learning Center",
   "/birthday":  "Birthday Attack",
   "/profile":   "Profile",
+  "/settings":  "Settings",
   "/admin":     "Admin Panel",
 };
 

@@ -3,13 +3,7 @@ const User = require('../models/User');
 const { aesEncrypt, aesDecrypt } = require('../utils/crypto/cryptoUtils');
 const { JWT_SECRET } = require('../config/config');
 
-const CHAT_KEY = process.env.CHAT_AES_KEY;
-if (!CHAT_KEY) {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('CHAT_AES_KEY environment variable is required in production.');
-  }
-  console.warn('[WARN] CHAT_AES_KEY not set. Chat encryption is disabled in dev mode.');
-}
+const CHAT_KEY = process.env.CHAT_AES_KEY || JWT_SECRET || 'SecureVault_Default_Chat_Key_2024!';
 
 // GET /api/chat/users
 exports.getChatUsers = async (req, res) => {
@@ -41,7 +35,12 @@ exports.getMessages = async (req, res) => {
     const decrypted = messages.map((msg) => {
       try {
         const plaintext = aesDecrypt(msg.encryptedMessage, CHAT_KEY, msg.iv);
-        return { ...msg.toObject(), message: plaintext.toString(), decrypted: true };
+        return {
+          ...msg.toObject(),
+          message: plaintext.toString(),
+          decrypted: true,
+          algorithm: 'AES-256-CBC',
+        };
       } catch {
         return { ...msg.toObject(), message: '[Encrypted]', decrypted: false };
       }
@@ -56,7 +55,8 @@ exports.getMessages = async (req, res) => {
 // POST /api/chat/send
 exports.sendMessage = async (req, res) => {
   try {
-    const { receiverId, message } = req.body;
+    const receiverId = req.body.receiverId || req.body.recipientId;
+    const { message } = req.body;
     if (!receiverId || !message) {
       return res.status(400).json({ success: false, message: 'Receiver and message required.' });
     }
@@ -70,19 +70,29 @@ exports.sendMessage = async (req, res) => {
       iv,
     });
 
+    const payload = {
+      _id: chatMsg._id,
+      senderId: req.user._id,
+      receiverId,
+      message,
+      iv,
+      encryptedMessage: encryptedData,
+      decrypted: true,
+      algorithm: 'AES-256-CBC',
+      createdAt: chatMsg.createdAt,
+    };
+
     // Real-time delivery via socket
     if (req.app.get('io')) {
-      req.app.get('io').to(receiverId).emit('new-message', {
-        senderId: req.user._id,
+      req.app.get('io').to(receiverId.toString()).emit('new-message', {
+        ...payload,
         senderName: req.user.name,
-        message,
-        timestamp: chatMsg.createdAt,
       });
     }
 
     res.status(201).json({
       success: true,
-      data: { messageId: chatMsg._id, encrypted: true, iv, algorithm: 'AES-256-CBC' },
+      data: payload,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

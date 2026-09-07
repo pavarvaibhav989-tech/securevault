@@ -23,6 +23,7 @@ import IDSPage from './pages/IDSPage';
 import LearningPage from './pages/LearningPage';
 import BirthdayPage from './pages/BirthdayPage';
 import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -48,12 +49,13 @@ function AppLayout() {
               <Route path="/learn" element={<LearningPage />} />
               <Route path="/birthday" element={<BirthdayPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route element={<ProtectedRoute adminOnly />}>
                 <Route path="/admin" element={<AdminPage />} />
               </Route>
             </Route>
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
         </main>
       </div>
     </div>

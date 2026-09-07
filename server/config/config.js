@@ -6,9 +6,9 @@ module.exports = {
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
-  SMTP_HOST: process.env.SMTP_HOST || '',
+  SMTP_HOST: process.env.SMTP_HOST || (process.env.SMTP_USER || process.env.EMAIL_USER ? 'smtp.gmail.com' : ''),
   SMTP_PORT: process.env.SMTP_PORT || 587,
-  SMTP_USER: process.env.SMTP_USER || '',
-  SMTP_PASS: process.env.SMTP_PASS || '',
+  SMTP_USER: process.env.SMTP_USER || process.env.EMAIL_USER || '',
+  SMTP_PASS: process.env.SMTP_PASS || process.env.EMAIL_PASS || '',
   NODE_ENV: process.env.NODE_ENV || 'development',
 };

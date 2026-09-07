@@ -149,6 +149,17 @@ export default function Sidebar({ isOpen, onToggle }) {
             <span>Profile</span>
           </Link>
 
+          <Link
+            to="/settings"
+            onClick={() => window.innerWidth < 1024 && onToggle()}
+            className={isActive("/settings") ? "sv-nav-item-active" : "sv-nav-item"}
+          >
+            <span className="material-symbols-outlined flex-shrink-0" style={{ fontSize: "18px" }}>
+              settings
+            </span>
+            <span>Settings</span>
+          </Link>
+
           <button
             onClick={handleLogout}
             className="sv-nav-item w-full text-left"
